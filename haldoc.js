@@ -40,6 +40,26 @@ db.serialize(function() {
 
 
 
+function throwOnError(err) {
+	if (err) throw err;
+}
+
+function runMultipleQueries(queries, callback) {
+	var outstandingQueries = queries.length;
+	var results = new Array(outstandingQueries);
+
+	for (var i = 0; i < queries.length; ++i) (function () {
+		var closedIndex = i;
+		queries[i](function (err, result) {
+			if (err) throw err;
+
+			results[closedIndex] = result;
+			if (--outstandingQueries === 0) callback(null, results);
+		});
+	})();
+}
+
+
 function NodeResource(id) {
 	return {
 		handle: function(req, res) {
@@ -48,28 +68,24 @@ function NodeResource(id) {
 			var dependencyOfQuery = db.prepare("SELECT dependent FROM depends_on WHERE dependency=?");
 			var dependsOnQuery = db.prepare("SELECT dependency FROM depends_on WHERE dependent=?");
 
-			function throwOnError(err) {
-				if (err) throw err;
-			}
-
 			dependencyOfQuery.run(id, throwOnError);
+			dependsOnQuery.run(id, throwOnError);
 
-			dependencyOfQuery.all(function (err, dependency_of) {
+			runMultipleQueries(
+				[
+					function (callback) { dependencyOfQuery.all(callback); },
+					function (callback) { dependsOnQuery.all(callback); }
+				],
+				render
+			);
+
+			function render(err, results) {
 				if (err) throw err;
 
-				dependsOnQuery.run(id, throwOnError);
-				dependsOnQuery.all(function (err, depends_on) {
-					if (err) throw err;
-					console.log(depends_on);
-					render(dependency_of, depends_on);
-				});
-			});
-
-			function render(dependency_of, depends_on) {
 				var data = {
 					"name": id,
-					"dependency_of": dependency_of,
-					"depends_on": depends_on
+					"dependency_of": results[0],
+					"depends_on": results[1]
 				};
 
 				Mu.render('node.html', data, {}, function (err, output) {
