@@ -14,19 +14,19 @@ db.serialize(function() {
 
 	var stmt = db.prepare("INSERT INTO depends_on VALUES (?, ?)");
 
-	stmt.run("hal", "black rider");
-	stmt.run("xbmc", "black rider");
+	stmt.run("hal", "blackrider");
+	stmt.run("xbmc", "blackrider");
 	stmt.run("xbmc", "nfs-blackrider-snasen");
-	stmt.run("spotify-mpd", "black rider");
-	stmt.run("cinemad", "black rider");
+	stmt.run("spotify-mpd", "blackrider");
+	stmt.run("cinemad", "blackrider");
 
 	stmt.run("aziz", "galen");
 	stmt.run("spotify", "galen");
 
 	stmt.run("laserfilm", "phone");
-	stmt.run("laser remote", "phone");
+	stmt.run("laserremote", "phone");
 	stmt.run("spotify", "phone");
-	stmt.run("xbmc remote", "phone");
+	stmt.run("xbmcremote", "phone");
 
 	stmt.run("nfs-blackrider-snasen", "ethernet-blackrider-switch");
 	stmt.run("nfs-blackrider-snasen", "ethernet-switch-bodswitch");
@@ -45,23 +45,41 @@ function NodeResource(id) {
 		handle: function(req, res) {
 			res.writeHead(200, {'Content-Type': 'text/html'});
 
-			var dependsOnQuery = db.prepare("SELECT dependent FROM depends_on WHERE dependency=?");
+			var dependencyOfQuery = db.prepare("SELECT dependent FROM depends_on WHERE dependency=?");
+			var dependsOnQuery = db.prepare("SELECT dependency FROM depends_on WHERE dependent=?");
 
-			dependsOnQuery.run(id, function(err) {
+			function throwOnError(err) {
 				if (err) throw err;
+			}
+
+			dependencyOfQuery.run(id, throwOnError);
+
+			dependencyOfQuery.all(function (err, dependency_of) {
+				if (err) throw err;
+
+				dependsOnQuery.run(id, throwOnError);
+				dependsOnQuery.all(function (err, depends_on) {
+					if (err) throw err;
+					console.log(depends_on);
+					render(dependency_of, depends_on);
+				});
 			});
 
-			dependsOnQuery.all(function(err, dependency_of) {
-				if (err) throw err;
+			function render(dependency_of, depends_on) {
+				var data = {
+					"name": id,
+					"dependency_of": dependency_of,
+					"depends_on": depends_on
+				};
 
-				Mu.render('dependency_of.html', { "dependency_of": dependency_of }, {}, function (err, output) {
+				Mu.render('node.html', data, {}, function (err, output) {
 					if (err) throw err;
 
 					output
 						.addListener('data', function (c) { res.write(c); })
 						.addListener('end', function () { res.end(); });
 				});
-			});
+			}
 		}
 	}
 }
