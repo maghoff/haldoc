@@ -85,6 +85,6 @@ var root = http_resources.MapLookup({
 	"node": NodeLookup()
 });
 
-http_resources.createServer(root).listen(8080, "127.0.0.1");
+http_resources.createServer(root).listen(1339, "127.0.0.1");
 
-console.log('Server running at http://127.0.0.1:8080/');
+console.log('Server running at http://127.0.0.1:1339/');
