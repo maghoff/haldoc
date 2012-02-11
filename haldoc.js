@@ -81,8 +81,32 @@ function NodeLookup() {
 }
 
 
+function BitbucketResource() {
+	return {
+		handle: function(req, res) {
+			res.writeHead(200, {'Content-Type': 'text/plain'});
+			res.end("Terminating server process.");
+			process.exit(0);
+		}
+	};
+}
+
+function BitbucketLookup() {
+	return {
+		lookup: function(reqpath, callback) {
+			if (reqpath !== '' && reqpath !== '/') {
+				callback(null);
+			} else {
+				callback(BitbucketResource());
+			}
+		}
+	}
+}
+
+
 var root = http_resources.MapLookup({
-	"node": NodeLookup()
+	"node": NodeLookup(),
+	"bitbucket": BitbucketLookup()
 });
 
 http_resources.createServer(root).listen(1339, "127.0.0.1");
