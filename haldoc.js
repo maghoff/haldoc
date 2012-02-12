@@ -153,18 +153,6 @@ function BitbucketResource() {
 }
 
 
-function DirectLookup(resourceConstructor) {
-	return {
-		lookup: function(reqpath, callback) {
-			if (reqpath !== '' && reqpath !== '/') {
-				callback(null);
-			} else {
-				callback(resourceConstructor());
-			}
-		}
-	}
-}
-
 
 
 var root = http_resources.MapLookup({
