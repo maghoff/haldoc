@@ -60,6 +60,33 @@ function runMultipleQueries(queries, callback) {
 }
 
 
+function IndexResource(id) {
+	return {
+		handle: function(req, res) {
+			res.writeHead(200, {'Content-Type': 'text/html'});
+
+			db.all(
+				"SELECT dependent AS node FROM depends_on UNION SELECT dependency AS node FROM depends_on",
+				function (err, result) {
+					if (err) throw err;
+
+					var data = {
+						"nodes": result,
+					};
+
+					Mu.render('index.html', data, {}, function (err, output) {
+						if (err) throw err;
+
+						output
+							.addListener('data', function (c) { res.write(c); })
+							.addListener('end', function () { res.end(); });
+					});
+				}
+			);
+		}
+	}
+}
+
 function NodeResource(id) {
 	return {
 		handle: function(req, res) {
@@ -125,22 +152,25 @@ function BitbucketResource() {
 	};
 }
 
-function BitbucketLookup() {
+
+function DirectLookup(resourceConstructor) {
 	return {
 		lookup: function(reqpath, callback) {
 			if (reqpath !== '' && reqpath !== '/') {
 				callback(null);
 			} else {
-				callback(BitbucketResource());
+				callback(resourceConstructor());
 			}
 		}
 	}
 }
 
 
+
 var root = http_resources.MapLookup({
+	"/": http_resources.DirectLookup(IndexResource),
 	"node": NodeLookup(),
-	"bitbucket": BitbucketLookup()
+	"bitbucket": http_resources.DirectLookup(BitbucketResource)
 });
 
 http_resources.createServer(root).listen(1339, "127.0.0.1");
